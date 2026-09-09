@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>영수증 스캔 가계부 - 사진 한 장으로 자동 가계부 정리</title>
+<meta name="description" content="영수증 사진을 찍으면 상호, 품목, 금액을 자동으로 인식해서 가계부에 정리해주는 무료 웹 도구입니다. 회원가입 없이 브라우저에만 저장됩니다." />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <h1>📷 영수증 스캔 가계부</h1>
+    <p>영수증 사진을 올리면 상호·품목·금액을 자동으로 인식해서 가계부로 정리해드려요.</p>
+  </header>
+
+  <!-- 상단 광고 슬롯: 애드센스 승인 후 <ins> 태그를 이 안에 넣어주세요 -->
+  <div class="ad-slot" id="ad-slot-top">광고 영역 (상단)</div>
+
+  <section class="card">
+    <div class="section-title">1. 영수증 사진 올리기</div>
+    <p class="section-sub">사진을 선택하거나 촬영하면 자동으로 텍스트를 인식합니다.</p>
+
+    <label class="upload-zone" id="upload-zone" for="file-input">
+      <div id="upload-label">📎 여기를 눌러 영수증 사진 선택 / 촬영</div>
+      <div class="hint">JPG, PNG 지원 · 사진은 서버에 저장되지 않습니다</div>
+      <input type="file" id="file-input" accept="image/*" capture="environment" />
+    </label>
+
+    <img id="preview" alt="영수증 미리보기" />
+
+    <button class="btn-primary" id="scan-btn" disabled>영수증 인식하기</button>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="card" id="result-card" style="display:none;">
+    <div class="section-title">2. 인식 결과 확인 &amp; 수정</div>
+    <p class="section-sub">자동 인식은 완벽하지 않을 수 있어요. 항목을 직접 수정한 뒤 저장해주세요.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>상호</th>
+          <th>날짜</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type="text" id="result-store" /></td>
+          <td><input type="date" id="result-date" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>분류</th>
+          <th class="price-cell">금액</th>
+          <th class="row-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="items-body"></tbody>
+    </table>
+
+    <div class="toolbar">
+      <button class="btn-secondary" id="add-row-btn">+ 항목 추가</button>
+    </div>
+
+    <div class="summary-row">
+      <span>합계</span>
+      <span id="result-total">0원</span>
+    </div>
+
+    <button class="btn-primary" id="save-btn">가계부에 저장</button>
+  </section>
+
+  <div class="ad-slot" id="ad-slot-mid">광고 영역 (중단)</div>
+
+  <section class="card">
+    <div class="section-title">3. 이번 달 가계부</div>
+    <p class="section-sub" id="history-sub">브라우저에만 저장돼요. 다른 기기와는 공유되지 않습니다.</p>
+
+    <div class="month-total">
+      <span>이번 달 지출 합계</span>
+      <span id="month-total-value">0원</span>
+    </div>
+
+    <table id="history-table" style="display:none;">
+      <thead>
+        <tr>
+          <th>날짜</th>
+          <th>상호</th>
+          <th>항목</th>
+          <th class="price-cell">금액</th>
+          <th class="row-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+    <div class="empty-state" id="history-empty">아직 저장된 내역이 없어요.</div>
+
+    <div class="toolbar">
+      <button class="btn-secondary" id="export-csv-btn">CSV로 내보내기</button>
+      <button class="btn-secondary" id="clear-all-btn">전체 삭제</button>
+    </div>
+  </section>
+
+  <div class="ad-slot" id="ad-slot-bottom">광고 영역 (하단)</div>
+
+  <section class="info-section">
+    <h2>어떻게 동작하나요?</h2>
+    <p>영수증 사진을 올리면 Google Cloud Vision OCR로 글자를 인식하고, 자체 로직으로 상호명·품목·금액을 구분합니다. 인식 결과는 직접 수정할 수 있고, 저장 버튼을 누르기 전까지는 어디에도 저장되지 않습니다. 저장된 데이터는 이 브라우저(로컬 스토리지)에만 남고 서버로 전송되지 않습니다.</p>
+    <h2>이런 분들께 추천해요</h2>
+    <p>매번 영수증을 손으로 옮겨 적기 귀찮은 분, 한 달 지출을 간단히 파악하고 싶은 분, 가계부 앱 가입 없이 가볍게 써보고 싶은 분께 유용해요.</p>
+  </section>
+
+  <footer class="site-footer">
+    <p>© <span id="year"></span> 영수증 스캔 가계부 · <a href="privacy.html">개인정보 처리방침</a></p>
+  </footer>
+
+</div>
+
+<script src="js/parser.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

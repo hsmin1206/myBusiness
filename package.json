@@ -1,0 +1,12 @@
+{
+  "name": "receipt-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "영수증 사진을 찍으면 자동으로 가계부를 정리해주는 정적 웹사이트 + Vercel 서버리스 OCR API",
+  "scripts": {
+    "test": "node test/parser.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
