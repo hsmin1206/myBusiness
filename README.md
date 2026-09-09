@@ -12,7 +12,7 @@ receipt-ledger/
 ├── index.html          # 메인 페이지 (업로드, 결과 확인/수정, 히스토리)
 ├── privacy.html         # 개인정보 처리방침 템플릿 (애드센스 심사에 필요, 내용 채워야 함)
 ├── style.css
-├── script.js            # 클라이언트 로직 (업로드, 저장, CSV 내보내기)
+├── script.js            # 클라이언트 로직 (업로드, 저장, 엑셀(.xlsx) 다운로드)
 ├── js/parser.js          # OCR 텍스트 → 상호/품목/금액 파싱 로직
 ├── api/ocr.js            # Vercel 서버리스 함수 (Google Cloud Vision 호출)
 ├── test/parser.test.js   # 파서 동작 확인용 테스트 (node test/parser.test.js)

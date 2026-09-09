@@ -6,6 +6,12 @@
   const MAX_IMAGE_WIDTH = 1280;
   const JPEG_QUALITY = 0.75;
 
+  const ICONS = {
+    camera: '<svg class="icon"><use href="#icon-camera"/></svg>',
+    check: '<svg class="icon"><use href="#icon-check"/></svg>',
+    x: '<svg class="icon"><use href="#icon-x"/></svg>',
+  };
+
   const els = {
     fileInput: document.getElementById('file-input'),
     uploadLabel: document.getElementById('upload-label'),
@@ -23,7 +29,7 @@
     historyBody: document.getElementById('history-body'),
     historyEmpty: document.getElementById('history-empty'),
     monthTotalValue: document.getElementById('month-total-value'),
-    exportCsvBtn: document.getElementById('export-csv-btn'),
+    exportExcelBtn: document.getElementById('export-excel-btn'),
     clearAllBtn: document.getElementById('clear-all-btn'),
     year: document.getElementById('year'),
   };
@@ -59,7 +65,7 @@
 
         els.preview.src = dataUrl;
         els.preview.style.display = 'block';
-        els.uploadLabel.textContent = '✅ 사진 선택 완료 · 다른 사진으로 바꾸려면 다시 클릭';
+        els.uploadLabel.innerHTML = `${ICONS.check} 사진 선택 완료 · 다른 사진으로 바꾸려면 다시 클릭`;
         els.scanBtn.disabled = false;
         els.status.textContent = '';
       };
@@ -127,7 +133,7 @@
         </select>
       </td>
       <td class="price-cell"><input type="number" class="item-price" value="${price || 0}" min="0" /></td>
-      <td class="row-actions"><button class="btn-danger remove-row">✕</button></td>
+      <td class="row-actions"><button class="btn-danger remove-row" aria-label="항목 삭제">${ICONS.x}</button></td>
     `;
     tr.querySelector('.remove-row').addEventListener('click', () => {
       tr.remove();
@@ -191,7 +197,7 @@
     currentImageBase64 = null;
     els.fileInput.value = '';
     els.preview.style.display = 'none';
-    els.uploadLabel.textContent = '📎 여기를 눌러 영수증 사진 선택 / 촬영';
+    els.uploadLabel.innerHTML = `${ICONS.camera} 여기를 눌러 영수증 사진 선택 / 촬영`;
     els.scanBtn.disabled = true;
   }
 
@@ -240,7 +246,7 @@
         <td>${escapeHtml(entry.store || '')}</td>
         <td>${escapeHtml(entry.name || '')}${entry.category ? ` <span class="badge">${escapeHtml(entry.category)}</span>` : ''}</td>
         <td class="price-cell">${formatWon(entry.price || 0)}</td>
-        <td class="row-actions"><button class="btn-danger remove-entry">✕</button></td>
+        <td class="row-actions"><button class="btn-danger remove-entry" aria-label="내역 삭제">${ICONS.x}</button></td>
       `;
       tr.querySelector('.remove-entry').addEventListener('click', () => {
         const updated = loadEntries().filter((e) => e.id !== entry.id);
@@ -259,38 +265,36 @@
     renderHistory();
   });
 
-  // ---------- CSV 내보내기 ----------
+  // ---------- 엑셀(.xlsx) 다운로드 ----------
 
-  els.exportCsvBtn.addEventListener('click', () => {
+  els.exportExcelBtn.addEventListener('click', () => {
     const all = loadEntries().sort((a, b) => (a.date < b.date ? -1 : 1));
     if (all.length === 0) {
       els.status.textContent = '내보낼 내역이 없어요.';
       return;
     }
+
+    if (typeof XLSX === 'undefined') {
+      els.status.textContent = '엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.';
+      return;
+    }
+
     const header = ['날짜', '상호', '항목', '분류', '금액'];
     const rows = all.map((e) => [e.date, e.store, e.name, e.category, e.price]);
-    const csv = [header, ...rows]
-      .map((row) => row.map(csvEscape).join(','))
-      .join('\r\n');
 
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `가계부_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    worksheet['!cols'] = [
+      { wch: 12 }, // 날짜
+      { wch: 18 }, // 상호
+      { wch: 22 }, // 항목
+      { wch: 12 }, // 분류
+      { wch: 12 }, // 금액
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '가계부');
+    XLSX.writeFile(workbook, `가계부_${new Date().toISOString().slice(0, 10)}.xlsx`);
   });
-
-  function csvEscape(val) {
-    const s = String(val ?? '');
-    if (/[",\r\n]/.test(s)) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  }
 
   // ---------- 유틸 ----------
 
