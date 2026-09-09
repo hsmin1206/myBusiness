@@ -225,13 +225,29 @@ td input:focus, td select:focus {
 }
 
 .toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 12px;
-  flex-wrap: wrap;
 }
 
-.toolbar button { flex: 1; min-width: 120px; }
+.toolbar button {
+  padding-left: 8px;
+  padding-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar button:only-child {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 520px) {
+  .toolbar.toolbar-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 
 .month-total {
   display: flex;
@@ -291,5 +307,5 @@ footer.site-footer a { color: var(--text-muted); }
   border-radius: 999px;
   background: #eef2ff;
   color: var(--primary-dark);
-  margin-left: 6px;
+  white-space: nowrap;
 }

@@ -1,10 +1,17 @@
 (function () {
   'use strict';
 
-  const CATEGORIES = ['식비', '카페/간식', '교통', '쇼핑', '생활용품', '문화/여가', '기타'];
+  const DEFAULT_CATEGORIES = ['식비', '카페/간식', '교통', '쇼핑', '생활용품', '문화/여가', '기타'];
   const STORAGE_KEY = 'receiptLedgerEntries';
+  const CATEGORY_KEY = 'receiptLedgerCategories';
   const MAX_IMAGE_WIDTH = 1280;
   const JPEG_QUALITY = 0.75;
+
+  // 엑셀 양식 레이아웃 (내보내기/불러오기가 공유)
+  const SHEET_NAME = '가계부';
+  const HEADER_ROW = 4; // 1-indexed: 날짜/분류/내용/금액/비고 헤더가 있는 행
+  const DATA_START_ROW = HEADER_ROW + 1;
+  const SUMIF_RANGE_END = 3000; // 합계 수식이 참조하는 마지막 행(넉넉하게 잡아서 나중에 행을 더 추가해도 자동 반영되게 함)
 
   const ICONS = {
     camera: '<svg class="icon"><use href="#icon-camera"/></svg>',
@@ -29,6 +36,9 @@
     historyBody: document.getElementById('history-body'),
     historyEmpty: document.getElementById('history-empty'),
     monthTotalValue: document.getElementById('month-total-value'),
+    importExcelBtn: document.getElementById('import-excel-btn'),
+    importExcelInput: document.getElementById('import-excel-input'),
+    templateBtn: document.getElementById('template-btn'),
     exportExcelBtn: document.getElementById('export-excel-btn'),
     clearAllBtn: document.getElementById('clear-all-btn'),
     year: document.getElementById('year'),
@@ -123,13 +133,14 @@
     els.resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function addItemRow(name, price) {
+  function addItemRow(name, price, category) {
     const tr = document.createElement('tr');
+    const categories = loadCategories();
     tr.innerHTML = `
       <td><input type="text" class="item-name" value="${escapeAttr(name || '')}" placeholder="품목명" /></td>
       <td>
         <select class="item-category">
-          ${CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('')}
+          ${categories.map((c) => `<option value="${escapeAttr(c)}"${c === category ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('')}
         </select>
       </td>
       <td class="price-cell"><input type="number" class="item-price" value="${price || 0}" min="0" /></td>
@@ -220,6 +231,32 @@
     }
   }
 
+  function loadCategories() {
+    try {
+      const raw = localStorage.getItem(CATEGORY_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return DEFAULT_CATEGORIES.slice();
+  }
+
+  function saveCategories(categories) {
+    try {
+      localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
+    } catch (e) {
+      console.error('localStorage 저장 실패', e);
+    }
+  }
+
+  // 같은 항목을 여러 번 불러와도 중복 저장되지 않도록 하는 식별 키
+  function entryKey(e) {
+    return [e.date, e.store, e.name, e.price].join('|');
+  }
+
   function renderHistory() {
     const all = loadEntries().sort((a, b) => (a.date < b.date ? 1 : -1));
     const now = new Date();
@@ -243,9 +280,10 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${entry.date || ''}</td>
-        <td>${escapeHtml(entry.store || '')}</td>
-        <td>${escapeHtml(entry.name || '')}${entry.category ? ` <span class="badge">${escapeHtml(entry.category)}</span>` : ''}</td>
+        <td>${entry.category ? `<span class="badge">${escapeHtml(entry.category)}</span>` : ''}</td>
+        <td>${escapeHtml(entry.name || '')}</td>
         <td class="price-cell">${formatWon(entry.price || 0)}</td>
+        <td>${escapeHtml(entry.store || '')}</td>
         <td class="row-actions"><button class="btn-danger remove-entry" aria-label="내역 삭제">${ICONS.x}</button></td>
       `;
       tr.querySelector('.remove-entry').addEventListener('click', () => {
@@ -265,7 +303,60 @@
     renderHistory();
   });
 
-  // ---------- 엑셀(.xlsx) 다운로드 ----------
+  // ---------- 엑셀(.xlsx) 양식 생성 (내보내기/빈 양식 공용) ----------
+
+  function buildLedgerSheet(entries, categories) {
+    const aoa = [];
+    aoa.push(['총액', ...categories]); // 1행: 라벨
+    aoa.push([]); // 2행: 합계 수식은 아래에서 직접 채움
+    aoa.push([]); // 3행: 여백
+    aoa.push(['날짜', '분류', '내용', '금액', '비고']); // 4행: 표 헤더
+    entries.forEach((e) => {
+      aoa.push([e.date || '', e.category || '', e.name || '', e.price || 0, e.store || '']);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // 합계/카테고리별 SUMIF 수식 (분류=B열, 금액=D열 기준)
+    ws['A2'] = { t: 'n', f: `SUM(D${DATA_START_ROW}:D${SUMIF_RANGE_END})`, z: '#,##0' };
+    categories.forEach((cat, idx) => {
+      const col = XLSX.utils.encode_col(idx + 1); // B, C, D ...
+      const safeCat = String(cat).replace(/"/g, '""');
+      ws[`${col}2`] = {
+        t: 'n',
+        f: `SUMIF(B${DATA_START_ROW}:B${SUMIF_RANGE_END},"${safeCat}",D${DATA_START_ROW}:D${SUMIF_RANGE_END})`,
+        z: '#,##0',
+      };
+    });
+
+    // 금액 열 숫자 서식
+    entries.forEach((e, i) => {
+      const r = DATA_START_ROW - 1 + i; // 0-indexed
+      const addr = XLSX.utils.encode_cell({ r, c: 3 });
+      if (ws[addr]) ws[addr].z = '#,##0';
+    });
+
+    // 나중에 행을 더 추가해도 수식이 살아있도록 시트 범위를 넉넉하게 선언
+    const maxCol = Math.max(categories.length, 4);
+    const maxRow = Math.max(DATA_START_ROW - 1 + entries.length, SUMIF_RANGE_END) - 1;
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: maxCol } });
+
+    ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 24 }, { wch: 12 }, { wch: 16 }];
+
+    return ws;
+  }
+
+  function downloadLedger(entries, filename) {
+    if (typeof XLSX === 'undefined') {
+      els.status.textContent = '엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.';
+      return;
+    }
+    const categories = loadCategories();
+    const ws = buildLedgerSheet(entries, categories);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, SHEET_NAME);
+    XLSX.writeFile(wb, filename);
+  }
 
   els.exportExcelBtn.addEventListener('click', () => {
     const all = loadEntries().sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -273,28 +364,145 @@
       els.status.textContent = '내보낼 내역이 없어요.';
       return;
     }
+    downloadLedger(all, `가계부_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  });
+
+  els.templateBtn.addEventListener('click', () => {
+    downloadLedger([], '영수증_가계부_양식.xlsx');
+  });
+
+  // ---------- 엑셀 불러오기 (같은 양식 파일에서 내역 가져오기) ----------
+
+  els.importExcelBtn.addEventListener('click', () => {
+    els.importExcelInput.click();
+  });
+
+  els.importExcelInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
 
     if (typeof XLSX === 'undefined') {
       els.status.textContent = '엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.';
       return;
     }
 
-    const header = ['날짜', '상호', '항목', '분류', '금액'];
-    const rows = all.map((e) => [e.date, e.store, e.name, e.category, e.price]);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const imported = importEntriesFromWorkbook(workbook);
 
-    const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    worksheet['!cols'] = [
-      { wch: 12 }, // 날짜
-      { wch: 18 }, // 상호
-      { wch: 22 }, // 항목
-      { wch: 12 }, // 분류
-      { wch: 12 }, // 금액
-    ];
+        if (imported.length === 0) {
+          els.status.textContent =
+            '엑셀에서 인식 가능한 내역을 찾지 못했어요. "날짜/분류/내용/금액" 열이 있는 표인지 확인해주세요.';
+          return;
+        }
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '가계부');
-    XLSX.writeFile(workbook, `가계부_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        const existing = loadEntries();
+        const seen = new Set(existing.map(entryKey));
+        let addedCount = 0;
+        imported.forEach((entry) => {
+          const key = entryKey(entry);
+          if (seen.has(key)) return;
+          seen.add(key);
+          existing.push(entry);
+          addedCount++;
+        });
+        saveEntries(existing);
+
+        const categories = loadCategories();
+        let categoriesChanged = false;
+        imported.forEach((entry) => {
+          if (entry.category && !categories.includes(entry.category)) {
+            categories.push(entry.category);
+            categoriesChanged = true;
+          }
+        });
+        if (categoriesChanged) saveCategories(categories);
+
+        renderHistory();
+        const dupCount = imported.length - addedCount;
+        els.status.textContent = `엑셀에서 ${addedCount}건을 새로 가져왔어요.${dupCount > 0 ? ` (중복 ${dupCount}건 제외)` : ''}`;
+      } catch (err) {
+        console.error(err);
+        els.status.textContent = '엑셀 파일을 읽는 중 오류가 발생했어요. 파일 형식을 확인해주세요.';
+      } finally {
+        els.importExcelInput.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
   });
+
+  function importEntriesFromWorkbook(workbook) {
+    let all = [];
+    workbook.SheetNames.forEach((sheetName) => {
+      const ws = workbook.Sheets[sheetName];
+      all = all.concat(extractEntriesFromSheet(ws));
+    });
+    return all;
+  }
+
+  function extractEntriesFromSheet(ws) {
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+
+    let headerRowIdx = -1;
+    let col = {};
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+      const row = (rows[i] || []).map((c) => (c == null ? '' : String(c).trim()));
+      if (row.includes('날짜') && row.includes('금액')) {
+        headerRowIdx = i;
+        col = {
+          date: row.indexOf('날짜'),
+          category: row.indexOf('분류'),
+          content: row.indexOf('내용'),
+          amount: row.indexOf('금액'),
+          remark: row.indexOf('비고'),
+        };
+        break;
+      }
+    }
+    if (headerRowIdx === -1) return [];
+
+    const entries = [];
+    let lastDate = null;
+
+    for (let i = headerRowIdx + 1; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const rawDate = col.date >= 0 ? row[col.date] : '';
+      const content = col.content >= 0 ? String(row[col.content] || '').trim() : '';
+      const rawAmount = col.amount >= 0 ? row[col.amount] : '';
+      const amount = parseFloat(String(rawAmount || '').replace(/,/g, ''));
+
+      const normalizedDate = normalizeDate(rawDate);
+      if (normalizedDate) lastDate = normalizedDate;
+
+      if (!content || !amount || amount <= 0) continue;
+
+      entries.push({
+        id: 'xlsx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        date: lastDate || new Date().toISOString().slice(0, 10),
+        store: col.remark >= 0 ? String(row[col.remark] || '').trim() : '',
+        name: content,
+        price: Math.round(amount),
+        category: (col.category >= 0 ? String(row[col.category] || '').trim() : '') || '기타',
+      });
+    }
+    return entries;
+  }
+
+  function normalizeDate(val) {
+    if (!val && val !== 0) return null;
+    if (val instanceof Date && !isNaN(val)) {
+      return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`;
+    }
+    const s = String(val).trim();
+    const m = s.match(/(\d{4})[.\-/년]\s?(\d{1,2})[.\-/월]\s?(\d{1,2})/);
+    if (m) {
+      return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+    }
+    return null;
+  }
 
   // ---------- 유틸 ----------
 

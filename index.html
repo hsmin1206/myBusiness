@@ -36,6 +36,15 @@
     <line x1="12" y1="5" x2="12" y2="19"/>
     <line x1="5" y1="12" x2="19" y2="12"/>
   </symbol>
+  <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="17 8 12 3 7 8"/>
+    <line x1="12" y1="3" x2="12" y2="15"/>
+  </symbol>
+  <symbol id="icon-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+  </symbol>
 </svg>
 
 <div class="wrap">
@@ -121,7 +130,7 @@
 
   <section class="card">
     <div class="section-title">3. 이번 달 가계부</div>
-    <p class="section-sub" id="history-sub">브라우저에만 저장돼요. 다른 기기와는 공유되지 않습니다.</p>
+    <p class="section-sub" id="history-sub">브라우저에만 저장돼요. 스캔한 영수증과 불러온 엑셀 내역이 함께 표시됩니다.</p>
 
     <div class="month-total">
       <span>이번 달 지출 합계</span>
@@ -132,9 +141,10 @@
       <thead>
         <tr>
           <th>날짜</th>
-          <th>상호</th>
-          <th>항목</th>
+          <th>분류</th>
+          <th>내용</th>
           <th class="price-cell">금액</th>
+          <th>비고</th>
           <th class="row-actions"></th>
         </tr>
       </thead>
@@ -142,10 +152,14 @@
     </table>
     <div class="empty-state" id="history-empty">아직 저장된 내역이 없어요.</div>
 
-    <div class="toolbar">
+    <input type="file" id="import-excel-input" accept=".xlsx,.xls" style="display:none" />
+    <div class="toolbar toolbar-4">
+      <button class="btn-secondary" id="import-excel-btn"><svg class="icon"><use href="#icon-upload"/></svg> 엑셀 불러오기</button>
+      <button class="btn-secondary" id="template-btn"><svg class="icon"><use href="#icon-file"/></svg> 빈 양식</button>
       <button class="btn-secondary" id="export-excel-btn"><svg class="icon"><use href="#icon-download"/></svg> 엑셀 다운로드</button>
       <button class="btn-secondary" id="clear-all-btn"><svg class="icon"><use href="#icon-x"/></svg> 전체 삭제</button>
     </div>
+    <p class="section-sub" style="margin-top:10px;">"엑셀 불러오기"는 "엑셀 다운로드"로 받은 것과 같은 양식의 파일만 인식해요 (날짜·분류·내용·금액·비고 열 기준).</p>
   </section>
 
   <!--
