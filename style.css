@@ -80,12 +80,23 @@ header.site-header p {
 }
 
 .upload-zone {
+  display: block;
+  width: 100%;
   border: 2px dashed var(--border);
   border-radius: var(--radius);
   padding: 28px 16px;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s;
+}
+
+.upload-zone #upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-weight: 500;
 }
 
 .upload-zone:hover,
