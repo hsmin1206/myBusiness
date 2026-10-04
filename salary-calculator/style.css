@@ -1,0 +1,241 @@
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --border: #e3e3e6;
+  --text: #1c1c1f;
+  --text-muted: #6b6b73;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --danger: #dc2626;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+header.site-header {
+  text-align: center;
+  padding: 24px 0 8px;
+}
+
+header.site-header h1 {
+  font-size: 1.5rem;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  flex-shrink: 0;
+}
+
+.icon-lg {
+  width: 26px;
+  height: 26px;
+  vertical-align: -5px;
+}
+
+button .icon {
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+
+header.site-header p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-top: 16px;
+}
+
+button {
+  font-family: inherit;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  width: 100%;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+
+.status {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  min-height: 1.2em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+th { color: var(--text-muted); font-weight: 600; font-size: 0.82rem; }
+
+.price-cell { text-align: right; white-space: nowrap; }
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.section-sub {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 12px;
+}
+
+.ad-slot {
+  margin: 20px 0;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+footer.site-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 32px;
+}
+
+footer.site-footer a { color: var(--text-muted); }
+
+.info-section {
+  margin-top: 28px;
+}
+
+.info-section h2 {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.info-section p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.field-row {
+  margin-top: 14px;
+}
+
+.field-row label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.field-row input[type="text"],
+.field-row input[type="number"] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.field-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.field-row .hint {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 6px 0 0;
+}
+
+.net-highlight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
+.net-highlight .net-label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.net-highlight .net-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+tfoot th {
+  text-align: left;
+  padding: 8px 6px;
+  border-top: 2px solid var(--text);
+  font-size: 0.9rem;
+}
+

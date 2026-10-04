@@ -57,27 +57,57 @@
   });
 
   function handleFile(file) {
+    if (!file.type || !file.type.startsWith('image/')) {
+      els.status.textContent = '이미지 파일만 업로드할 수 있어요. (JPG, PNG 등)';
+      return;
+    }
+
+    // 새 파일을 고르는 즉시 이전 상태/에러 메시지를 정리
+    currentImageBase64 = null;
+    els.scanBtn.disabled = true;
+    els.status.textContent = '사진을 불러오는 중...';
+
     const reader = new FileReader();
+    reader.onerror = () => {
+      console.error('FileReader error', reader.error);
+      els.status.textContent = '사진을 읽는 중 오류가 발생했어요. 다른 사진으로 다시 시도해주세요.';
+    };
     reader.onload = (ev) => {
       const img = new Image();
+      img.onerror = () => {
+        console.error('이미지 디코딩 실패');
+        els.status.textContent =
+          '이 사진 형식을 지원하지 않는 것 같아요(HEIC 등). 일반 JPG/PNG 사진으로 다시 시도해주세요.';
+      };
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-        if (width > MAX_IMAGE_WIDTH) {
-          height = Math.round((height * MAX_IMAGE_WIDTH) / width);
-          width = MAX_IMAGE_WIDTH;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-        currentImageBase64 = dataUrl.split(',')[1];
+        try {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          if (!width || !height) {
+            throw new Error('이미지 크기를 읽을 수 없어요.');
+          }
+          if (width > MAX_IMAGE_WIDTH) {
+            height = Math.round((height * MAX_IMAGE_WIDTH) / width);
+            width = MAX_IMAGE_WIDTH;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+          if (!dataUrl || dataUrl === 'data:,') {
+            throw new Error('이미지를 변환하지 못했어요.');
+          }
+          currentImageBase64 = dataUrl.split(',')[1];
 
-        els.preview.src = dataUrl;
-        els.preview.style.display = 'block';
-        els.uploadLabel.innerHTML = `${ICONS.check} 사진 선택 완료 · 다른 사진으로 바꾸려면 다시 클릭`;
-        els.scanBtn.disabled = false;
-        els.status.textContent = '';
+          els.preview.src = dataUrl;
+          els.preview.style.display = 'block';
+          els.uploadLabel.innerHTML = `${ICONS.check} 사진 선택 완료 · 다른 사진으로 바꾸려면 다시 클릭`;
+          els.scanBtn.disabled = false;
+          els.status.textContent = '';
+        } catch (err) {
+          console.error(err);
+          els.status.textContent = '사진 처리 중 오류가 발생했어요: ' + err.message;
+        }
       };
       img.src = ev.target.result;
     };
@@ -88,23 +118,52 @@
 
   els.scanBtn.addEventListener('click', async () => {
     if (!currentImageBase64) return;
-    setLoading(true, '영수증을 인식하는 중...');
+    setLoading(true, '영수증을 인식하는 중... (사진에 따라 몇 초 걸릴 수 있어요)');
 
     try {
-      const res = await fetch('/api/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: currentImageBase64 }),
-      });
-      const data = await res.json();
+      let res;
+      try {
+        res = await fetch('/api/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: currentImageBase64 }),
+        });
+      } catch (networkErr) {
+        console.error(networkErr);
+        throw new Error('서버에 연결할 수 없어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.');
+      }
+
+      // 서버가 JSON이 아닌 응답(타임아웃 HTML 페이지 등)을 줄 수도 있으므로
+      // res.ok 확인 전에 무조건 res.json()을 호출하지 않고, 파싱 실패도 대비한다.
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        data = null;
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || 'OCR 요청에 실패했습니다.');
+        if (data && data.error) {
+          throw new Error(data.error);
+        }
+        if (res.status === 413) {
+          throw new Error('이미지 용량이 너무 커요. 다른 사진으로 다시 시도해주세요.');
+        }
+        if (res.status === 504) {
+          throw new Error('서버 응답 시간이 초과되었어요. 잠시 후 다시 시도해주세요.');
+        }
+        throw new Error(`인식 서버에서 오류가 발생했어요. (상태 코드 ${res.status})`);
+      }
+
+      if (!data) {
+        throw new Error('서버 응답을 해석할 수 없어요. 잠시 후 다시 시도해주세요.');
       }
 
       const parsed = ReceiptParser.parseReceipt(data.text || '');
       renderResult(parsed);
-      els.status.textContent = '인식이 완료되었어요. 아래 내용을 확인해주세요.';
+      els.status.textContent = data.text
+        ? '인식이 완료되었어요. 아래 내용을 확인해주세요.'
+        : '글자를 인식하지 못했어요. 아래에서 항목을 직접 입력해주세요.';
     } catch (err) {
       console.error(err);
       els.status.textContent = '인식에 실패했습니다: ' + err.message;

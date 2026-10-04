@@ -1,0 +1,12 @@
+{
+  "name": "salary-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "2026년 4대보험·근로소득세를 반영한 연봉 실수령액 계산기 (순수 정적 웹사이트)",
+  "scripts": {
+    "test": "node test/salary-calc.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -10,12 +10,13 @@ localStorage에만 데이터를 저장하며, Vercel 무료 플랜 + Google Clou
 ```
 receipt-ledger/
 ├── index.html          # 메인 페이지 (업로드, 결과 확인/수정, 히스토리)
-├── privacy.html         # 개인정보 처리방침 템플릿 (애드센스 심사에 필요, 내용 채워야 함)
+├── privacy.html        # 개인정보 처리방침 템플릿 (애드센스 심사에 필요, 내용 채워야 함)
 ├── style.css
-├── script.js            # 클라이언트 로직 (업로드, 저장, 엑셀(.xlsx) 다운로드)
-├── js/parser.js          # OCR 텍스트 → 상호/품목/금액 파싱 로직
-├── api/ocr.js            # Vercel 서버리스 함수 (Google Cloud Vision 호출)
-├── test/parser.test.js   # 파서 동작 확인용 테스트 (node test/parser.test.js)
+├── script.js           # 클라이언트 로직 (업로드, 저장, 엑셀(.xlsx) 불러오기/다운로드)
+├── js/parser.js        # OCR 텍스트 → 상호/품목/금액 파싱 로직
+├── api/ocr.js          # Vercel 서버리스 함수 (Google Cloud Vision 호출)
+├── test/parser.test.js # 파서 동작 확인용 테스트 (npm test)
+├── CLAUDE.md           # Claude Code 인수인계 문서
 ├── .env.example
 └── package.json
 ```
@@ -88,7 +89,6 @@ GOOGLE_VISION_API_KEY=발급받은_키
 
 ## 7. 향후 확장 아이디어
 
-- 계산기 모음 사이트로 확장 시, 같은 배포에 `/health-insurance.html`,
-  `/car-tax.html` 같은 페이지를 추가하고 상단 네비게이션만 공유하면 됩니다.
+- 다른 도구(연봉 실수령액 계산기 등)는 별도 프로젝트/도메인으로 분리해서 운영합니다 (이 저장소와 무관).
 - 카테고리별/월별 지출 차트(막대그래프 등) 추가
 - PWA(홈 화면 추가) 지원으로 재방문율 개선
